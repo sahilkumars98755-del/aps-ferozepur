@@ -1,0 +1,29 @@
+name: Deploy site from release asset
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download site archive
+        run: |
+          curl -sL --fail "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/aps-ferozepur-website.zip" -o site.zip
+          unzip -o site.zip -d site
+
+      - name: Commit site files to main
+        run: |
+          cp -r site/. .
+          rm -rf site site.zip
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy website files from release asset" || echo "No changes to commit"
+          git push
