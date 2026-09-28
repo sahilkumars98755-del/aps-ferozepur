@@ -1,0 +1,43 @@
+name: Upscale images for sharp display
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  upscale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Upscale photos 2x with sharpening
+        run: |
+          pip install --quiet pillow
+          python3 - <<'PYEOF'
+          from PIL import Image, ImageFilter
+          import glob, os
+          count = 0
+          for path in glob.glob('images/*.JPG') + ['images/logo.png']:
+              im = Image.open(path)
+              w, h = im.size
+              if w <= 800:
+                  im = im.resize((w*2, h*2), Image.LANCZOS)
+                  im = im.filter(ImageFilter.UnsharpMask(radius=1.6, percent=90, threshold=2))
+              if path.endswith('.JPG'):
+                  im.save(path, 'JPEG', quality=86, optimize=True)
+              else:
+                  im.save(path, 'PNG', optimize=True)
+              count += 1
+          print('upscaled', count, 'images')
+          PYEOF
+      - name: Commit upscaled images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Upscale all photos 2x with sharpening for retina/mobile sharpness" || echo "no changes"
+          git push
